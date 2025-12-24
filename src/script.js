@@ -3,7 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { deltaTime } from "three/tsl";
+import { Snowfall } from "./Snow/snowfall.js";
 
 /**
  * Base
@@ -17,6 +17,9 @@ const canvas = document.querySelector("canvas.webgl");
 // Scene
 const scene = new THREE.Scene();
 
+// Don't create snow yet - wait until model is loaded
+let snowSystem = null;
+
 // Loaders
 const textureLoader = new THREE.TextureLoader();
 const dracoLoader = new DRACOLoader();
@@ -24,32 +27,42 @@ dracoLoader.setDecoderPath("/draco/");
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
+// Store for cleanup
+let bakedTexture = null;
+let mixer = null;
+let currentModel = null;
+
 /**
  * Sizes
  */
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
+  pixelRatio: Math.min(window.devicePixelRatio, 2),
 };
+sizes.resolution = new THREE.Vector2(
+  sizes.width * sizes.pixelRatio,
+  sizes.height * sizes.pixelRatio
+);
 
 window.addEventListener("resize", () => {
-  // Update sizes
   sizes.width = window.innerWidth;
   sizes.height = window.innerHeight;
+  sizes.pixelRatio = Math.min(window.devicePixelRatio, 2);
+  sizes.resolution.set(
+    sizes.width * sizes.pixelRatio,
+    sizes.height * sizes.pixelRatio
+  );
 
-  // Update camera
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
-
-  // Update renderer
   renderer.setSize(sizes.width, sizes.height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(sizes.pixelRatio);
 });
 
 /**
  * Camera
  */
-// Base camera
 const camera = new THREE.PerspectiveCamera(
   35,
   sizes.width / sizes.height,
@@ -72,75 +85,155 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
 });
 renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(sizes.pixelRatio);
+
+/**
+ * Create Snowfall Function
+ */
+function createSnowfallSystem() {
+  if (snowSystem) {
+    snowSystem.dispose(); // Clean up existing snow
+  }
+
+  // Create snow system WITHOUT options parameter
+  snowSystem = Snowfall(scene, sizes);
+
+  return snowSystem;
+}
 
 /**
  * Model
  */
-const bakedTexture = new THREE.TextureLoader().load("./Baked3.jpg");
-bakedTexture.flipY = false;
-bakedTexture.colorSpace = THREE.SRGBColorSpace;
-console.log(bakedTexture);
-const bakedMaterial = new THREE.MeshBasicMaterial({ map: bakedTexture });
+function loadModel() {
+  bakedTexture = new THREE.TextureLoader().load("./Baked3.jpg");
+  bakedTexture.flipY = false;
+  bakedTexture.colorSpace = THREE.SRGBColorSpace;
+  const bakedMaterial = new THREE.MeshBasicMaterial({ map: bakedTexture });
 
-const emissionMaterial = new THREE.MeshBasicMaterial({ color: 0xe7be99 });
-const emissionBlueMaterial = new THREE.MeshBasicMaterial({ color: 0xa7d5e7 });
+  const emissionMaterial = new THREE.MeshBasicMaterial({ color: 0xe7be99 });
+  const emissionBlueMaterial = new THREE.MeshBasicMaterial({ color: 0xa7d5e7 });
 
-let mixer;
-gltfLoader.load("baked3.glb", (gltf) => {
-  gltf.scene.traverse((child) => {
-    if (child.isMesh) {
-      // Check if name contains "emission" (case-insensitive)
-      if (child.name.toLowerCase().includes("emission-yellow")) {
-        child.material = emissionMaterial;
-      } else if (child.name.toLowerCase().includes("emission-blue")) {
-        child.material = emissionBlueMaterial;
-      } else {
-        child.material = bakedMaterial;
+  gltfLoader.load("baked3.glb", (gltf) => {
+    currentModel = gltf.scene;
+
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        if (child.name.toLowerCase().includes("emission-yellow")) {
+          child.material = emissionMaterial;
+        } else if (child.name.toLowerCase().includes("emission-blue")) {
+          child.material = emissionBlueMaterial;
+        } else {
+          child.material = bakedMaterial;
+        }
       }
-    }
+    });
+
+    // Animations
+    mixer = new THREE.AnimationMixer(gltf.scene);
+
+    // Toy Train animation
+    const ttengine = mixer.clipAction(gltf.animations[0]);
+    const ttcarrier = mixer.clipAction(gltf.animations[1]);
+    const ttcarrier2 = mixer.clipAction(gltf.animations[2]);
+    const bezier = mixer.clipAction(gltf.animations[4]);
+
+    ttengine.play();
+    ttcarrier.play();
+    ttcarrier2.play();
+    bezier.play();
+
+    // Ferris Wheel animation
+    const fw = mixer.clipAction(gltf.animations[3]);
+    const fwCarrier1 = mixer.clipAction(gltf.animations[6]);
+    const fwCarrier2 = mixer.clipAction(gltf.animations[7]);
+    const fwCarrier3 = mixer.clipAction(gltf.animations[8]);
+    const fwCarrier4 = mixer.clipAction(gltf.animations[9]);
+    const fwCarrier5 = mixer.clipAction(gltf.animations[10]);
+    const fwCarrier6 = mixer.clipAction(gltf.animations[11]);
+    const fwCarrier7 = mixer.clipAction(gltf.animations[12]);
+    const fwCarrier8 = mixer.clipAction(gltf.animations[13]);
+
+    fw.play();
+    fwCarrier1.play();
+    fwCarrier2.play();
+    fwCarrier3.play();
+    fwCarrier4.play();
+    fwCarrier5.play();
+    fwCarrier6.play();
+    fwCarrier7.play();
+    fwCarrier8.play();
+
+    scene.add(gltf.scene);
+
+    // Create snowfall AFTER model is loaded
+    createSnowfallSystem();
   });
+}
 
-  // Animations
-  mixer = new THREE.AnimationMixer(gltf.scene);
+// Load the model
+loadModel();
 
-  // Toy Train animation
-  const ttengine = mixer.clipAction(gltf.animations[0]);
-  const ttcarrier = mixer.clipAction(gltf.animations[1]);
-  const ttcarrier2 = mixer.clipAction(gltf.animations[2]);
-  const bezier = mixer.clipAction(gltf.animations[4]);
+/**
+ * Snowfall Toggle Functions
+ */
+function toggleSnowfall(enable = true) {
+  if (enable && !snowSystem) {
+    // Create new snow system
+    createSnowfallSystem();
+  } else if (!enable && snowSystem) {
+    // Remove existing snow
+    snowSystem.dispose();
+    snowSystem = null;
+  }
+}
 
-  ttengine.play();
-  ttcarrier.play();
-  ttcarrier2.play();
-  bezier.play();
+// Add simple GUI control for snowfall toggle
+const snowFolder = gui.addFolder("Snowfall");
+snowFolder.add({ snow: true }, "snow").name("Enable Snow").onChange(toggleSnowfall);
 
-  // Ferris Wheel animation
-  const fw = mixer.clipAction(gltf.animations[3]);
-  const fwCarrier1 = mixer.clipAction(gltf.animations[6]);
-  const fwCarrier2 = mixer.clipAction(gltf.animations[7]);
-  const fwCarrier3 = mixer.clipAction(gltf.animations[8]);
-  const fwCarrier4 = mixer.clipAction(gltf.animations[9]);
-  const fwCarrier5 = mixer.clipAction(gltf.animations[10]);
-  const fwCarrier6 = mixer.clipAction(gltf.animations[11]);
-  const fwCarrier7 = mixer.clipAction(gltf.animations[12]);
-  const fwCarrier8 = mixer.clipAction(gltf.animations[13]);
+// Add a reset button if you want
+snowFolder.add({ reset: () => {
+  if (snowSystem) {
+    snowSystem.dispose();
+    snowSystem = Snowfall(scene, sizes);
+  }
+}}, "reset").name("Reset Snow");
 
-  fw.play();
-  fwCarrier1.play();
-  fwCarrier2.play();
-  fwCarrier3.play();
-  fwCarrier4.play();
-  fwCarrier5.play();
-  fwCarrier6.play();
-  fwCarrier7.play();
-  fwCarrier8.play();
+/**
+ * Cleanup Function
+ */
+function cleanupScene() {
+  // Remove snow
+  if (snowSystem) {
+    snowSystem.dispose();
+    snowSystem = null;
+  }
 
+  // Remove model
+  if (currentModel) {
+    scene.remove(currentModel);
+    currentModel = null;
+  }
 
-  console.log(gltf)
+  // Dispose mixer
+  if (mixer) {
+    mixer.stopAllAction();
+    mixer = null;
+  }
 
-  scene.add(gltf.scene);
-});
+  // Dispose textures
+  if (bakedTexture) {
+    bakedTexture.dispose();
+    bakedTexture = null;
+  }
+
+  console.log("Scene cleaned up");
+}
+
+/**
+ * Animation loop cleanup helper
+ */
+let animationId = null;
 
 /**
  * Animate
@@ -156,6 +249,11 @@ const tick = () => {
   // Update controls
   controls.update();
 
+  // Update snowfall if it exists
+  if (snowSystem) {
+    snowSystem.update();
+  }
+
   // Update mixer
   if (mixer) {
     mixer.update(deltaTime);
@@ -164,8 +262,29 @@ const tick = () => {
   // Render
   renderer.render(scene, camera);
 
-  // Call tick again on the next frame
-  window.requestAnimationFrame(tick);
+  // Store animation frame ID for cleanup
+  animationId = window.requestAnimationFrame(tick);
 };
 
 tick();
+
+/**
+ * Event Listeners for Cleanup
+ */
+window.addEventListener("beforeunload", () => {
+  cleanupScene();
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+});
+
+// Add toggle button if you have one
+document.getElementById("toggleSnow")?.addEventListener("click", () => {
+  toggleSnowfall(!snowSystem);
+});
+
+// Add reset button if you have one
+document.getElementById("resetScene")?.addEventListener("click", () => {
+  cleanupScene();
+  loadModel();
+});
