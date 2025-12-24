@@ -4,18 +4,41 @@ import GUI from "lil-gui";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { Snowfall } from "./Snow/snowfall.js";
+import Stats from "stats.js";
+
+// ===========
+// Stats.js
+//==========
+const stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
 
 /**
  * Base
  */
 // Debug
 const gui = new GUI();
+const debugObject = {};
 
 // Canvas
 const canvas = document.querySelector("canvas.webgl");
 
 // Scene
 const scene = new THREE.Scene();
+
+//========
+// FOG
+//========
+debugObject.fogColor = 0x6693aa;
+debugObject.fogDensity = 0.015;
+scene.fog = new THREE.FogExp2(debugObject.fogColor, debugObject.fogDensity);
+const fog = gui.addFolder("Fog");
+fog.addColor(debugObject, "fogColor").onChange(() => {
+  scene.fog.color.set(debugObject.fogColor);
+});
+fog.add(debugObject, "fogDensity", 0.001, 0.05, 0.0001).onChange(() => {
+  scene.fog.density = debugObject.fogDensity;
+});
 
 // Don't create snow yet - wait until model is loaded
 let snowSystem = null;
@@ -96,7 +119,7 @@ function createSnowfallSystem() {
   }
 
   // Create snow system WITHOUT options parameter
-  snowSystem = Snowfall(scene, sizes);
+  snowSystem = Snowfall(scene, sizes, gui, debugObject);
 
   return snowSystem;
 }
@@ -174,32 +197,6 @@ function loadModel() {
 loadModel();
 
 /**
- * Snowfall Toggle Functions
- */
-function toggleSnowfall(enable = true) {
-  if (enable && !snowSystem) {
-    // Create new snow system
-    createSnowfallSystem();
-  } else if (!enable && snowSystem) {
-    // Remove existing snow
-    snowSystem.dispose();
-    snowSystem = null;
-  }
-}
-
-// Add simple GUI control for snowfall toggle
-const snowFolder = gui.addFolder("Snowfall");
-snowFolder.add({ snow: true }, "snow").name("Enable Snow").onChange(toggleSnowfall);
-
-// Add a reset button if you want
-snowFolder.add({ reset: () => {
-  if (snowSystem) {
-    snowSystem.dispose();
-    snowSystem = Snowfall(scene, sizes);
-  }
-}}, "reset").name("Reset Snow");
-
-/**
  * Cleanup Function
  */
 function cleanupScene() {
@@ -242,6 +239,8 @@ const clock = new THREE.Clock();
 let previousTime = 0;
 
 const tick = () => {
+  stats.begin();
+  // Update clock
   const elapsedTime = clock.getElapsedTime();
   const deltaTime = elapsedTime - previousTime;
   previousTime = elapsedTime;
@@ -264,27 +263,8 @@ const tick = () => {
 
   // Store animation frame ID for cleanup
   animationId = window.requestAnimationFrame(tick);
+
+  stats.end();
 };
 
 tick();
-
-/**
- * Event Listeners for Cleanup
- */
-window.addEventListener("beforeunload", () => {
-  cleanupScene();
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
-});
-
-// Add toggle button if you have one
-document.getElementById("toggleSnow")?.addEventListener("click", () => {
-  toggleSnowfall(!snowSystem);
-});
-
-// Add reset button if you have one
-document.getElementById("resetScene")?.addEventListener("click", () => {
-  cleanupScene();
-  loadModel();
-});

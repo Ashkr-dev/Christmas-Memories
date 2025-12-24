@@ -2,17 +2,23 @@ import * as THREE from "three";
 import snowVertexShader from "/Shaders/Snow/vertex.glsl";
 import snowFragmentShader from "/Shaders/Snow/fragment.glsl";
 
-export function Snowfall(scene, sizes) {
-  const particleCount = 5000;
+export function Snowfall(scene, sizes, gui, debugObject) {
+  // Debug
+  debugObject.particleCount = 5000;
+  debugObject.particleSize = 0.5;
+  debugObject.opacity = 0.8;
+  debugObject.color = 0xffffff;
+
+  const particleCount = debugObject.particleCount;
   const centerX = 11.5;
   const centerZ = -6.4;
   const width = 35;
   const depth = 35;
   const minHeight = 0;
   const maxHeight = 35;
-  const particleSize = 0.5;
-  const opacity = 0.8;
-  const color = 0xffffff;
+  const particleSize = debugObject.particleSize;
+  const opacity = debugObject.opacity;
+  const color = debugObject.color;
 
   // Geometry
   const geometry = new THREE.BufferGeometry();
