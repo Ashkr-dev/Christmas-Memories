@@ -7,7 +7,6 @@ import { Snowfall } from "./Snow/snowfall.js";
 import smokeVertexShader from "./shaders/smoke/vertex.glsl";
 import smokeFragmentShader from "./shaders/smoke/fragment.glsl";
 import Stats from "stats.js";
-import { Wireframe } from "three/examples/jsm/Addons.js";
 
 // ===========
 // Stats.js
@@ -106,6 +105,13 @@ scene.add(camera);
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(11.516876571401152, 1.0227020470847956, -6.426773274453287);
 controls.enableDamping = true;
+controls.minDistance = 10;
+controls.maxDistance = 50;
+controls.minPolarAngle = 0;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.minAzimuthAngle = 0.1;
+controls.maxAzimuthAngle = Math.PI / 2.1;
+controls.update();
 
 /**
  * Renderer
