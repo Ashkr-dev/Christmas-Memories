@@ -4,8 +4,8 @@ import GUI from "lil-gui";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { Snowfall } from "./Snow/Snowfall.js";
-import smokeVertexShader from "./shaders/Smoke/vertex.glsl";
-import smokeFragmentShader from "./shaders/Smoke/fragment.glsl";
+import smokeVertexShader from "./Shaders/Smoke/vertex.glsl";
+import smokeFragmentShader from "./Shaders/Smoke/fragment.glsl";
 import Stats from "stats.js";
 
 // ===========
