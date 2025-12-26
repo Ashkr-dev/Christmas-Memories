@@ -91,10 +91,12 @@ window.addEventListener("resize", () => {
 //===========
 // Cursor Events
 //===========
+let needsRaycast = true;
 const mouse = new THREE.Vector2();
 window.addEventListener("mousemove", (event) => {
   mouse.x = (event.clientX / sizes.width) * 2 - 1;
   mouse.y = -(event.clientY / sizes.height) * 2 + 1;
+  needsRaycast = true; // Only set flag on mouse move
 });
 
 /**
@@ -104,22 +106,37 @@ const camera = new THREE.PerspectiveCamera(
   35,
   sizes.width / sizes.height,
   0.1,
-  300
+  250
 );
 camera.position.set(27.72101502698181, 5.275676269851925, 16.09621549208414);
+// Update projection matrix only when needed
+camera.aspect = sizes.width / sizes.height;
+camera.updateProjectionMatrix();
 scene.add(camera);
 
 // Controls
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(11.516876571401152, 1.0227020470847956, -6.426773274453287);
 controls.enableDamping = true;
-controls.minDistance = 10;
+controls.dampingFactor = 0.05; // Default is 0.05, increase for less smoothing
+
+// // Disable unnecessary features
+// controls.enablePan = false; // If not needed
+// controls.enableZoom = true;
+// controls.enableRotate = true;
+
+controls.minDistance = 5;
 controls.maxDistance = 50;
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2.1;
-controls.minAzimuthAngle = 0.4;
-controls.maxAzimuthAngle = Math.PI / 2.45;
+controls.minAzimuthAngle = 0.35;
+controls.maxAzimuthAngle = Math.PI / 2.5;
 controls.update();
+
+// Update only when needed
+controls.addEventListener("change", () => {
+  needsRaycast = true; // Update raycast when camera moves
+});
 
 /**
  * Renderer
@@ -127,9 +144,15 @@ controls.update();
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   antialias: true,
+  powerPreference: "high-performance", // Add this
+  precision: "highp", // or "mediump" for better performance
 });
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(sizes.pixelRatio);
+// Add these settings
+renderer.autoClear = true;
+renderer.sortObjects = true; // Helps with transparency rendering order
+renderer.outputColorSpace = THREE.SRGBColorSpace; // Standard for web
 
 /**
  * Create Snowfall Function
@@ -165,6 +188,11 @@ function loadModel() {
   bakedTexture = new THREE.TextureLoader().load("./Baked3.jpg");
   bakedTexture.flipY = false;
   bakedTexture.colorSpace = THREE.SRGBColorSpace;
+  bakedTexture.generateMipmaps = true;
+  bakedTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  bakedTexture.magFilter = THREE.LinearFilter;
+  bakedTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
   const bakedMaterial = new THREE.MeshBasicMaterial({ map: bakedTexture });
   const emissionMaterial = new THREE.MeshBasicMaterial({ color: 0xe7be99 });
   const emissionBlueMaterial = new THREE.MeshBasicMaterial({ color: 0xa7d5e7 });
@@ -314,24 +342,16 @@ const tick = () => {
   previousTime = elapsedTime;
 
   // Cast a Ray
-  raycaster.setFromCamera(mouse, camera);
 
-  if (presentBoxes && presentBoxes.length > 0) {
-    const intersects = raycaster.intersectObjects(presentBoxes);
-
+  if (needsRaycast && presentBoxes && presentBoxes.length > 0) {
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(presentBoxes, false);
+    needsRaycast = false;
     if (intersects.length) {
       const intersectedObject = intersects[0].object;
 
-      // if (!currentIntersect) {
-      //   // Mouse entered a present
-      //   console.log("mouse enter", intersectedObject.name);
-      // }
-
       currentIntersect = intersectedObject;
     } else {
-      // if (currentIntersect) {
-      //   console.log("mouse leave", currentIntersect.name);
-      // }
       currentIntersect = null;
     }
 
