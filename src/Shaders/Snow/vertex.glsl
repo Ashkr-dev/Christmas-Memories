@@ -18,8 +18,8 @@ void main() {
     gl_PointSize *= (1.0 / -viewPosition.z); // Perspective
     
     // Optional: Add minimum and maximum sizes
-    gl_PointSize = max(gl_PointSize, 1.0);
-    gl_PointSize = min(gl_PointSize, 100.0);
+    gl_PointSize = max(gl_PointSize, 0.1);
+    gl_PointSize = min(gl_PointSize, 50.0);
     
     vScale = aScale;
 }

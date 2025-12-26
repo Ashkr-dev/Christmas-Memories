@@ -21,7 +21,7 @@ document.body.appendChild(stats.dom);
 // Debug
 const gui = new GUI();
 const debugObject = {};
-debugObject.smokeUvY = 0.4;
+debugObject.smokeUvY = 0.216;
 debugObject.smokeUvX = 0.327;
 debugObject.smokeColor = "#e7be99";
 
@@ -34,7 +34,6 @@ const scene = new THREE.Scene();
 //========
 // FOG
 //========
-
 debugObject.fogColor = 0x6693aa;
 debugObject.fogDensity = 0.015;
 scene.fog = new THREE.FogExp2(debugObject.fogColor, debugObject.fogDensity);
@@ -89,6 +88,15 @@ window.addEventListener("resize", () => {
   renderer.setPixelRatio(sizes.pixelRatio);
 });
 
+//===========
+// Cursor Events
+//===========
+const mouse = new THREE.Vector2();
+window.addEventListener("mousemove", (event) => {
+  mouse.x = (event.clientX / sizes.width) * 2 - 1;
+  mouse.y = -(event.clientY / sizes.height) * 2 + 1;
+});
+
 /**
  * Camera
  */
@@ -109,8 +117,8 @@ controls.minDistance = 10;
 controls.maxDistance = 50;
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2.1;
-controls.minAzimuthAngle = 0.1;
-controls.maxAzimuthAngle = Math.PI / 2.1;
+controls.minAzimuthAngle = 0.4;
+controls.maxAzimuthAngle = Math.PI / 2.45;
 controls.update();
 
 /**
@@ -137,6 +145,13 @@ function createSnowfallSystem() {
   return snowSystem;
 }
 
+//===========
+// Raycaster
+//===========
+const raycaster = new THREE.Raycaster();
+let currentIntersect = null;
+const originalScales = new Map(); // Store original scales
+
 /**
  * Model
  */
@@ -145,6 +160,7 @@ perlinTexture.wrapS = THREE.RepeatWrapping;
 perlinTexture.wrapT = THREE.RepeatWrapping;
 
 let smokeMaterial = null;
+let presentBoxes = [];
 function loadModel() {
   bakedTexture = new THREE.TextureLoader().load("./Baked3.jpg");
   bakedTexture.flipY = false;
@@ -172,6 +188,9 @@ function loadModel() {
   gltfLoader.load("baked6.glb", (gltf) => {
     currentModel = gltf.scene;
 
+    presentBoxes = [];
+    originalScales.clear(); // Clear previous scales
+
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
         if (child.name.toLowerCase().includes("emission-yellow")) {
@@ -180,6 +199,10 @@ function loadModel() {
           child.material = emissionBlueMaterial;
         } else if (child.name.toLowerCase().includes("smoke")) {
           child.material = smokeMaterial;
+        } else if (child.name.toLowerCase().includes("presents")) {
+          presentBoxes.push(child);
+          originalScales.set(child, child.scale.clone()); // Store original scale
+          child.material = bakedMaterial;
         } else {
           child.material = bakedMaterial;
         }
@@ -187,39 +210,41 @@ function loadModel() {
     });
 
     // Animations
-    mixer = new THREE.AnimationMixer(gltf.scene);
+    mixer = new THREE.AnimationMixer(currentModel);
 
-    // Toy Train animation
-    const ttengine = mixer.clipAction(gltf.animations[0]);
-    const ttcarrier = mixer.clipAction(gltf.animations[1]);
-    const ttcarrier2 = mixer.clipAction(gltf.animations[2]);
-    const bezier = mixer.clipAction(gltf.animations[4]);
+    if (gltf.scene) {
+      // Toy Train animation
+      const ttengine = mixer.clipAction(gltf.animations[0]);
+      const ttcarrier = mixer.clipAction(gltf.animations[1]);
+      const ttcarrier2 = mixer.clipAction(gltf.animations[2]);
+      const bezier = mixer.clipAction(gltf.animations[4]);
 
-    ttengine.play();
-    ttcarrier.play();
-    ttcarrier2.play();
-    bezier.play();
+      ttengine.play();
+      ttcarrier.play();
+      ttcarrier2.play();
+      bezier.play();
 
-    // Ferris Wheel animation
-    const fw = mixer.clipAction(gltf.animations[3]);
-    const fwCarrier1 = mixer.clipAction(gltf.animations[6]);
-    const fwCarrier7 = mixer.clipAction(gltf.animations[5]);
-    const fwCarrier2 = mixer.clipAction(gltf.animations[7]);
-    const fwCarrier3 = mixer.clipAction(gltf.animations[8]);
-    const fwCarrier4 = mixer.clipAction(gltf.animations[9]);
-    const fwCarrier5 = mixer.clipAction(gltf.animations[10]);
-    const fwCarrier6 = mixer.clipAction(gltf.animations[11]);
+      // Ferris Wheel animation
+      const fw = mixer.clipAction(gltf.animations[3]);
+      const fwCarrier1 = mixer.clipAction(gltf.animations[6]);
+      const fwCarrier7 = mixer.clipAction(gltf.animations[5]);
+      const fwCarrier2 = mixer.clipAction(gltf.animations[7]);
+      const fwCarrier3 = mixer.clipAction(gltf.animations[8]);
+      const fwCarrier4 = mixer.clipAction(gltf.animations[9]);
+      const fwCarrier5 = mixer.clipAction(gltf.animations[10]);
+      const fwCarrier6 = mixer.clipAction(gltf.animations[11]);
 
-    fw.play();
-    fwCarrier1.play();
-    fwCarrier2.play();
-    fwCarrier3.play();
-    fwCarrier4.play();
-    fwCarrier5.play();
-    fwCarrier6.play();
-    fwCarrier7.play();
+      fw.play();
+      fwCarrier1.play();
+      fwCarrier2.play();
+      fwCarrier3.play();
+      fwCarrier4.play();
+      fwCarrier5.play();
+      fwCarrier6.play();
+      fwCarrier7.play();
+    }
 
-    scene.add(gltf.scene);
+    scene.add(currentModel);
 
     // Create snowfall AFTER model is loaded
     createSnowfallSystem();
@@ -287,6 +312,43 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime();
   const deltaTime = elapsedTime - previousTime;
   previousTime = elapsedTime;
+
+  // Cast a Ray
+  raycaster.setFromCamera(mouse, camera);
+
+  if (presentBoxes && presentBoxes.length > 0) {
+    const intersects = raycaster.intersectObjects(presentBoxes);
+
+    if (intersects.length) {
+      const intersectedObject = intersects[0].object;
+
+      // if (!currentIntersect) {
+      //   // Mouse entered a present
+      //   console.log("mouse enter", intersectedObject.name);
+      // }
+
+      currentIntersect = intersectedObject;
+    } else {
+      // if (currentIntersect) {
+      //   console.log("mouse leave", currentIntersect.name);
+      // }
+      currentIntersect = null;
+    }
+
+    // Smooth scale animation for all presents
+    presentBoxes.forEach((present) => {
+      const originalScale = originalScales.get(present);
+      if (originalScale) {
+        const targetScale =
+          present === currentIntersect
+            ? originalScale.clone().multiplyScalar(1.3)
+            : originalScale.clone();
+
+        // Smooth interpolation
+        present.scale.lerp(targetScale, 0.2);
+      }
+    });
+  }
 
   // Update Smoke
   smokeMaterial.uniforms.uTime.value = elapsedTime;

@@ -8,6 +8,8 @@ export function Snowfall(scene, sizes, gui, debugObject) {
   debugObject.particleSize = 0.5;
   debugObject.opacity = 0.8;
   debugObject.color = 0xffffff;
+  debugObject.snowflakeMinScale = 0.3;
+  debugObject.snowflakeMaxScale = 50.0;
 
   const particleCount = debugObject.particleCount;
   const centerX = 11.5;
@@ -44,11 +46,7 @@ export function Snowfall(scene, sizes, gui, debugObject) {
 
   // Texture
   const textureLoader = new THREE.TextureLoader();
-  const snowflakeTexture = [
-    textureLoader.load("/snowflake/snowflake1.png"),
-    textureLoader.load("/snowflake/snowflake2.png"),
-    textureLoader.load("/snowflake/snowflake3.jpg"),
-  ];
+  const snowflakeTexture = textureLoader.load("/snowflake/snowflake3.jpg");
 
   // Material
   const material = new THREE.ShaderMaterial({
@@ -59,11 +57,13 @@ export function Snowfall(scene, sizes, gui, debugObject) {
       uSize: new THREE.Uniform(particleSize),
       uColor: new THREE.Uniform(new THREE.Color(color)),
       uOpacity: new THREE.Uniform(opacity),
-      uTexture: new THREE.Uniform(snowflakeTexture[2]),
+      uTexture: new THREE.Uniform(snowflakeTexture),
       uResolution: new THREE.Uniform(
         new THREE.Vector2(sizes.width, sizes.height)
       ),
       uPixelRatio: new THREE.Uniform(sizes.pixelRatio),
+      uSnowflakeMinScale: new THREE.Uniform(debugObject.snowflakeMinScale),
+      uSnowflakeMaxScale: new THREE.Uniform(debugObject.snowflakeMaxScale),
     },
     transparent: true,
     blending: THREE.AdditiveBlending,
