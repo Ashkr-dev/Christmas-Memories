@@ -185,7 +185,7 @@ perlinTexture.wrapT = THREE.RepeatWrapping;
 let smokeMaterial = null;
 let presentBoxes = [];
 function loadModel() {
-  bakedTexture = new THREE.TextureLoader().load("./Baked3.jpg");
+  bakedTexture = new THREE.TextureLoader().load("./Baked3.webp");
   bakedTexture.flipY = false;
   bakedTexture.colorSpace = THREE.SRGBColorSpace;
   bakedTexture.generateMipmaps = true;
@@ -213,7 +213,7 @@ function loadModel() {
     blending: THREE.AdditiveBlending,
   });
 
-  gltfLoader.load("baked6.glb", (gltf) => {
+  gltfLoader.load("baked7.glb", (gltf) => {
     currentModel = gltf.scene;
 
     presentBoxes = [];

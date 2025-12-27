@@ -6,10 +6,10 @@ export function Snowfall(scene, sizes, gui, debugObject) {
   // Debug
   debugObject.particleCount = 5000;
   debugObject.particleSize = 0.5;
-  debugObject.opacity = 0.8;
-  debugObject.color = 0xffffff;
-  debugObject.snowflakeMinScale = 0.3;
-  debugObject.snowflakeMaxScale = 50.0;
+  debugObject.opacity = 1.0;
+  debugObject.snowflakeMinScale = 0.2;
+  debugObject.snowflakeMaxScale = 40.0;
+  debugObject.snowflakeColor = "#ffffff";
 
   const particleCount = debugObject.particleCount;
   const centerX = 11.5;
@@ -20,7 +20,6 @@ export function Snowfall(scene, sizes, gui, debugObject) {
   const maxHeight = 35;
   const particleSize = debugObject.particleSize;
   const opacity = debugObject.opacity;
-  const color = debugObject.color;
 
   // Geometry
   const geometry = new THREE.BufferGeometry();
@@ -46,7 +45,7 @@ export function Snowfall(scene, sizes, gui, debugObject) {
 
   // Texture
   const textureLoader = new THREE.TextureLoader();
-  const snowflakeTexture = textureLoader.load("/snowflake/snowflake3.jpg");
+  const snowflakeTexture = textureLoader.load("/snowflake/snowflake3_new.webp");
 
   // Material
   const material = new THREE.ShaderMaterial({
@@ -55,7 +54,7 @@ export function Snowfall(scene, sizes, gui, debugObject) {
     uniforms: {
       uTime: new THREE.Uniform(0),
       uSize: new THREE.Uniform(particleSize),
-      uColor: new THREE.Uniform(new THREE.Color(color)),
+      uColor: new THREE.Uniform(new THREE.Color(debugObject.snowflakeColor)),
       uOpacity: new THREE.Uniform(opacity),
       uTexture: new THREE.Uniform(snowflakeTexture),
       uResolution: new THREE.Uniform(
@@ -73,6 +72,22 @@ export function Snowfall(scene, sizes, gui, debugObject) {
   // Create snow
   const snow = new THREE.Points(geometry, material);
   scene.add(snow);
+
+  //==========
+  // Gui
+  //==========
+  const snowflakeFolder = gui.addFolder("Snowflake");
+  snowflakeFolder.addColor(debugObject, "snowflakeColor").onChange(() => {
+    material.uniforms.uColor.value.set(debugObject.snowflakeColor);
+  });
+  snowflakeFolder
+    .add(debugObject, "opacity")
+    .min(0)
+    .max(2)
+    .step(0.01)
+    .onChange(() => {
+      material.uniforms.uOpacity.value = debugObject.opacity;
+    });
 
   // Update function
   function update() {
