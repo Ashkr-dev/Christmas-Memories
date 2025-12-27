@@ -1,9 +1,9 @@
 import { Howl } from "howler";
 
 const bgMusic = new Howl({
-  src: ["./music/christmas_bgMusic.mp3"],
+  src: ["./music/bgMusic.mp3"],
   loop: true,
-  volume: 0.15,
+  volume: 0.12,
   autoplay: false,
   preload: true,
   html5: true, // Use HTML5 Audio for better compatibility
@@ -36,28 +36,3 @@ export class Music {
     }
   }
 }
-
-// //============
-// // Music Toggle
-// //============
-// const bgMusic = new Howl({
-//   src: ["./music/christmas_bgMusic.mp3"],
-//   loop: true,
-//   volume: 0.2,
-//   autoplay: false,
-//   preload: true,
-//   html5: true, // Use HTML5 Audio for better compatibility
-// });
-
-// const toggleButton = document.getElementById("toggle");
-// let toggleState = false;
-// toggleButton.addEventListener("click", () => {
-//   toggleState = !toggleState;
-//   if (toggleState) {
-//     document.body.classList.add("on");
-//     bgMusic.play();
-//   } else {
-//     document.body.classList.remove("on");
-//     bgMusic.pause();
-//   }
-// });
