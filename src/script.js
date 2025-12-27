@@ -7,6 +7,7 @@ import { Snowfall } from "./Snow/Snowfall.js";
 import smokeVertexShader from "./Shaders/Smoke/vertex.glsl";
 import smokeFragmentShader from "./Shaders/Smoke/fragment.glsl";
 import Stats from "stats.js";
+import { Music } from "./Music/music.js";
 
 // ===========
 // Stats.js
@@ -16,10 +17,16 @@ stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild(stats.dom);
 
 /**
+ * Music
+ */
+const music = new Music();
+
+/**
  * Base
  */
 // Debug
 const gui = new GUI();
+gui.close();
 const debugObject = {};
 debugObject.smokeUvY = 0.216;
 debugObject.smokeUvX = 0.327;
@@ -129,8 +136,8 @@ controls.minDistance = 5;
 controls.maxDistance = 50;
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2.1;
-controls.minAzimuthAngle = 0.35;
-controls.maxAzimuthAngle = Math.PI / 2.5;
+controls.minAzimuthAngle = 0.1;
+controls.maxAzimuthAngle = Math.PI / 2.1;
 controls.update();
 
 // Update only when needed
